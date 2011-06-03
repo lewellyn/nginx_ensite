@@ -28,13 +28,16 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-NGINX=$(which nginx)
+NGINX_ROOT=/opt/nginx
+NGINX=${NGINX_ROOT}/sbin/nginx
 
 ## The paths for both nginx configuration files and the sites
 ## configuration files and symbolic link destinations.
-NGINX_CONF_DIR=/etc/nginx
+NGINX_CONF_DIR=${NGINX_ROOT}/conf
 AVAILABLE_SITES_PATH="$NGINX_CONF_DIR/sites-available"
 ENABLED_SITES_PATH="$NGINX_CONF_DIR/sites-enabled"
+
+INIT_PATH=/etc/rc.d/nginx
 
 SCRIPTNAME=${0##*/}
 
@@ -57,7 +60,7 @@ if [ $# -ne 1 ]; then
     print_usage
 else
     SITE_AVAILABLE="$AVAILABLE_SITES_PATH/$1"
-    # If enabling the 'default' site then make sure that it's teh
+    # If enabling the 'default' site then make sure that it's the
     # first to be loaded.
     if [ $1 == "default" ]; then
         SITE_ENABLED="$ENABLED_SITES_PATH/000-default"
@@ -72,15 +75,21 @@ fi
 case $ACTION in
     ENABLE)
         if [ -r $SITE_AVAILABLE ]; then     
-          [ -h $SITE_ENABLED ] || ln -s $SITE_AVAILABLE $SITE_ENABLED
+          [ -h $SITE_ENABLED ] || ENABLED_SITE=1
+	  if [ $ENABLED_SITE ]; then
+		  ln -s $SITE_AVAILABLE $SITE_ENABLED
+	  fi
           # Test for a well formed configuration.
           echo "Testing nginx configuration..."
           $NGINX -t && STATUS=0
           if [ $STATUS ]; then
-              echo -n "site $1 has been enabled."
-              echo "Run /etc/init.d/nginx reload to apply the changes."
+              echo "site $1 has been enabled."
+              echo "Run ${INIT_PATH} reload to apply the changes."
               exit 0
           else
+              if [ $ENABLED_SITE ]; then
+		      rm $SITE_ENABLED
+	      fi
               exit 2
           fi
         else
@@ -92,7 +101,7 @@ case $ACTION in
         if [ -h $SITE_ENABLED ]; then
             rm $SITE_ENABLED
             echo "Site $1 has been disabled."
-            echo "Run /etc/init.d/nginx reload to apply the changes."
+            echo "Run ${INIT_PATH} reload to apply the changes."
             exit 0
         else
             echo "Site $1 doesn't exist."
