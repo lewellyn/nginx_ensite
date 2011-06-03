@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/local/bin/bash
 
 # nginx_ensite --- Bash script to enable or disable a site in nginx.
 
@@ -28,7 +28,7 @@
 # FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 # DEALINGS IN THE SOFTWARE.
 
-NGINX_ROOT=/opt/nginx
+NGINX_ROOT=/usr/local/nginx
 NGINX=${NGINX_ROOT}/sbin/nginx
 
 ## The paths for both nginx configuration files and the sites
@@ -37,7 +37,7 @@ NGINX_CONF_DIR=${NGINX_ROOT}/conf
 AVAILABLE_SITES_PATH="$NGINX_CONF_DIR/sites-available"
 ENABLED_SITES_PATH="$NGINX_CONF_DIR/sites-enabled"
 
-INIT_PATH=/etc/rc.d/nginx
+INIT_PATH=/usr/local/etc/rc.d/nginx
 
 SCRIPTNAME=${0##*/}
 
