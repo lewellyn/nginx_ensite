@@ -6,6 +6,9 @@
 
 # Author: António P. P. Almeida <appa@perusio.net>
 
+# Modifications Copyright (c) 2011 Matt Lewandowsky - Greenviolet
+# <matt@greenviolet.net> <http://www.greenviolet.net>
+
 # Permission is hereby granted, free of charge, to any person obtaining a
 # copy of this software and associated documentation files (the "Software"),
 # to deal in the Software without restriction, including without limitation
@@ -30,6 +33,7 @@
 
 NGINX_ROOT=/usr/local/nginx
 NGINX=${NGINX_ROOT}/sbin/nginx
+INIT_PATH=/usr/local/etc/rc.d/nginx
 
 ## The paths for both nginx configuration files and the sites
 ## configuration files and symbolic link destinations.
@@ -37,14 +41,12 @@ NGINX_CONF_DIR=${NGINX_ROOT}/conf
 AVAILABLE_SITES_PATH="$NGINX_CONF_DIR/sites-available"
 ENABLED_SITES_PATH="$NGINX_CONF_DIR/sites-enabled"
 
-INIT_PATH=/usr/local/etc/rc.d/nginx
-
 SCRIPTNAME=${0##*/}
 
 ## Checking the type of action we will perform. Enabling or disabling.
-ACTION=$(echo $SCRIPTNAME | awk '$0 ~ /dissite/ {print "DISABLE"} $0 ~ /ensite/ {print "ENABLE"} $0 !~ /(dis|en)site/ {print "UNKNOWN"}')
+ACTION=$(echo $SCRIPTNAME | awk '$0 ~ /dissite/ {print "DISABLE"} $0 ~ /ensite/ {print "ENABLE"} $0 ~ /lssite/ {print "LIST"} $0 !~ /(dis|en|ls)site/ {print "UNKNOWN"}')
 
-if [ "$ACTION" == "UNKNOWN" ]; then
+if [ "$ACTION" = "UNKNOWN" ]; then
     echo "$SCRIPTNAME: Unknown action!"
     print_usage
 fi
@@ -56,13 +58,13 @@ function print_usage() {
 }
 
 ## Check the number of arguments.
-if [ $# -ne 1 ]; then
+if [ $# -ne 1 -a "$ACTION" != "LIST" ]; then
     print_usage
 else
     SITE_AVAILABLE="$AVAILABLE_SITES_PATH/$1"
     # If enabling the 'default' site then make sure that it's the
     # first to be loaded.
-    if [ $1 == "default" ]; then
+    if [ $# -eq 1 -a "$1" = "default" ]; then
         SITE_ENABLED="$ENABLED_SITES_PATH/000-default"
     else
         SITE_ENABLED="$ENABLED_SITES_PATH/$1"    
@@ -73,6 +75,24 @@ fi
 ## that the symbolic link exists if disabling. Perform the desired
 ## action if possible. If not signal an error and exit.
 case $ACTION in
+    LIST)
+	    echo "Enabled?   Site"
+	    echo "========   ========================"
+	    for site in ${AVAILABLE_SITES_PATH}/*; do
+		    site=${site##*/}
+		    case ${site} in
+			    examples*|*~|*.bak*)
+				    ;;
+			    *)
+				    if [ -f "${ENABLED_SITES_PATH}/${site}" ]; then
+					    echo "+ Y        ${site}"
+				    else
+					    echo "-    N     ${site}"
+				    fi;
+				    ;;
+		    esac;
+	    done
+	    ;;
     ENABLE)
         if [ -r $SITE_AVAILABLE ]; then     
           [ -h $SITE_ENABLED ] || ENABLED_SITE=1
@@ -83,7 +103,7 @@ case $ACTION in
           echo "Testing nginx configuration..."
           $NGINX -t && STATUS=0
           if [ $STATUS ]; then
-              echo "site $1 has been enabled."
+              echo "===> Site $1 has been enabled."
               echo "Run ${INIT_PATH} reload to apply the changes."
               exit 0
           else
@@ -93,14 +113,14 @@ case $ACTION in
               exit 2
           fi
         else
-            echo "Site configuration file $1 not found."
+            echo "===> Site configuration file $1 not found."
             exit 3
         fi
         ;;
     DISABLE)
         if [ -h $SITE_ENABLED ]; then
             rm $SITE_ENABLED
-            echo "Site $1 has been disabled."
+            echo "===> Site $1 has been disabled."
             echo "Run ${INIT_PATH} reload to apply the changes."
             exit 0
         else
