@@ -53,7 +53,12 @@ fi
 
 
 function print_usage() {
-    echo "$SCRIPTNAME <site name>"
+    cat <<EOF
+Usage: $SCRIPTNAME <site name>
+
+Note: Use '${SCRIPTNAME%_*}_lssite' to list sites.
+
+EOF
     exit 1
 }
 
@@ -84,6 +89,7 @@ case $ACTION in
 		    site=${site##*/}
 		    case ${site} in
 			    examples*|*~|*.bak*)
+				    # We don't want the examples or any backup files to show.
 				    ;;
 			    *)
 				    if [ -f "${ENABLED_SITES_PATH}/${site}" ]; then
